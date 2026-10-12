@@ -51,11 +51,23 @@
     // frame will be set to final bounds in viewDidLayoutSubviews
     [gradView.layer insertSublayer:_gradientLayer atIndex:0];
 
+    // The viewport stays inside the safe area. Tall content can scroll instead
+    // of compressing labels or pushing the actions off a landscape screen.
+    UIScrollView *scrollView = [UIScrollView new];
+    scrollView.translatesAutoresizingMaskIntoConstraints = NO;
+    scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+    scrollView.alwaysBounceVertical = NO;
+    [self.view addSubview:scrollView];
+
+    UIView *scrollContent = [UIView new];
+    scrollContent.translatesAutoresizingMaskIntoConstraints = NO;
+    [scrollView addSubview:scrollContent];
+
     // Container for labels/buttons
     _contentView = [UIView new];
     _contentView.translatesAutoresizingMaskIntoConstraints = NO;
     _contentView.backgroundColor = [UIColor clearColor];
-    [self.view addSubview:_contentView];
+    [scrollContent addSubview:_contentView];
 
     _titleLabel = [UILabel new];
     _titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
@@ -63,7 +75,10 @@
     _titleLabel.textColor = [UIColor whiteColor];
     _titleLabel.font = [UIFont systemFontOfSize:28 weight:UIFontWeightBold];
     _titleLabel.textAlignment = NSTextAlignmentCenter;
-    _titleLabel.numberOfLines = 2;
+    _titleLabel.numberOfLines = 0;
+    _titleLabel.lineBreakMode = NSLineBreakByWordWrapping;
+    [_titleLabel setContentCompressionResistancePriority:UILayoutPriorityRequired
+                                                forAxis:UILayoutConstraintAxisVertical];
     [self.contentView addSubview:_titleLabel];
 
     _messageLabel = [UILabel new];
@@ -73,6 +88,9 @@
     _messageLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightRegular];
     _messageLabel.textAlignment = NSTextAlignmentCenter;
     _messageLabel.numberOfLines = 0;
+    _messageLabel.lineBreakMode = NSLineBreakByWordWrapping;
+    [_messageLabel setContentCompressionResistancePriority:UILayoutPriorityRequired
+                                                  forAxis:UILayoutConstraintAxisVertical];
     [self.contentView addSubview:_messageLabel];
 
     // Кнопка «Allow» — яркая, акцентная
@@ -114,20 +132,31 @@
         [gradView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
         [gradView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
 
-        [self.contentView.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
-        // Desired vertical center (safe-area) — lower priority so inequality clamps can win.
-        ({  NSLayoutConstraint *c = [self.contentView.centerYAnchor
-                constraintEqualToAnchor:self.view.safeAreaLayoutGuide.centerYAnchor];
-            c.priority = UILayoutPriorityDefaultHigh; c; }),
-        // Hard clamp: never leave the safe area.
+        [scrollView.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor],
+        [scrollView.bottomAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.bottomAnchor],
+        [scrollView.leadingAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.leadingAnchor constant:16],
+        [scrollView.trailingAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.trailingAnchor constant:-16],
+        [scrollContent.topAnchor constraintEqualToAnchor:scrollView.contentLayoutGuide.topAnchor],
+        [scrollContent.bottomAnchor constraintEqualToAnchor:scrollView.contentLayoutGuide.bottomAnchor],
+        [scrollContent.leadingAnchor constraintEqualToAnchor:scrollView.contentLayoutGuide.leadingAnchor],
+        [scrollContent.trailingAnchor constraintEqualToAnchor:scrollView.contentLayoutGuide.trailingAnchor],
+        [scrollContent.widthAnchor constraintEqualToAnchor:scrollView.frameLayoutGuide.widthAnchor],
+        [scrollContent.heightAnchor constraintGreaterThanOrEqualToAnchor:scrollView.frameLayoutGuide.heightAnchor],
+        // Fill the viewport when possible; grow vertically when the text needs it.
+        ({ NSLayoutConstraint *c = [scrollContent.heightAnchor
+                constraintEqualToAnchor:scrollView.frameLayoutGuide.heightAnchor];
+            c.priority = UILayoutPriorityDefaultLow; c; }),
+        [self.contentView.centerXAnchor constraintEqualToAnchor:scrollContent.centerXAnchor],
+        [self.contentView.centerYAnchor constraintEqualToAnchor:scrollContent.centerYAnchor],
         [self.contentView.topAnchor
-            constraintGreaterThanOrEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor constant:16],
+            constraintGreaterThanOrEqualToAnchor:scrollContent.topAnchor constant:16],
         [self.contentView.bottomAnchor
-            constraintLessThanOrEqualToAnchor:self.view.safeAreaLayoutGuide.bottomAnchor constant:-16],
-        // Width: desired 82 % of view width, capped at 480 pt (comfortable on wide landscape).
+            constraintLessThanOrEqualToAnchor:scrollContent.bottomAnchor constant:-16],
+        // Keep comfortable margins and cap the text width on wide displays.
         ({  NSLayoutConstraint *c = [self.contentView.widthAnchor
                 constraintEqualToAnchor:self.view.widthAnchor multiplier:0.82];
             c.priority = UILayoutPriorityDefaultHigh; c; }),
+        [self.contentView.widthAnchor constraintLessThanOrEqualToAnchor:scrollContent.widthAnchor],
         [self.contentView.widthAnchor constraintLessThanOrEqualToConstant:480],
 
         [self.titleLabel.topAnchor constraintEqualToAnchor:self.contentView.topAnchor],
