@@ -101,6 +101,7 @@ jobs:
           check_file "Gemfile"
           check_file "EasyLaunch-Patch/patch.sh"
           check_file "ProjectSettings/ProjectSettings.asset"
+          check_file "Assets/Cones/Editor/CiBuild.cs"
           echo "::endgroup::"
 
           if [[ ${#MISSING[@]} -gt 0 ]]; then
@@ -290,12 +291,14 @@ jobs:
           EL_APPLE_APP_ID:           ${{ vars.APPLE_ID_DIGITS || secrets.APPLE_ID_DIGITS }}
           EL_ENDPOINT_URL:           ${{ vars.EL_ENDPOINT_URL }}
           EL_LOADING_TITLE:          ${{ vars.EL_LOADING_TITLE || 'Loading' }}
+          EL_UNITY_ORIENTATION:      portrait
         run: |
           echo "::group::Generate easylaunch.config"
           printf 'EL_APPSFLYER_DEV_KEY="%s"\n'      "$EL_APPSFLYER_DEV_KEY"      >  EasyLaunch-Patch/easylaunch.config
           printf 'EL_APPLE_APP_ID="%s"\n'           "$EL_APPLE_APP_ID"           >> EasyLaunch-Patch/easylaunch.config
           printf 'EL_ENDPOINT_URL="%s"\n'           "$EL_ENDPOINT_URL"           >> EasyLaunch-Patch/easylaunch.config
           printf 'EL_LOADING_TITLE="%s"\n'          "$EL_LOADING_TITLE"          >> EasyLaunch-Patch/easylaunch.config
+          printf 'EL_UNITY_ORIENTATION="%s"\n'      "$EL_UNITY_ORIENTATION"      >> EasyLaunch-Patch/easylaunch.config
           echo "Config written."
           echo "::endgroup::"
 
