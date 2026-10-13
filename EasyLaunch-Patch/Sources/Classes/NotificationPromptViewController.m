@@ -1,4 +1,14 @@
 #import "NotificationPromptViewController.h"
+#import <QuartzCore/QuartzCore.h>
+
+// Use a backing layer so UIKit resizes/animates the dimming view and its
+// gradient together during rotation. A separately resized sublayer can lag.
+@interface ELNotificationDimmingView : UIView
+@end
+
+@implementation ELNotificationDimmingView
++ (Class)layerClass { return [CAGradientLayer class]; }
+@end
 
 @interface NotificationPromptViewController ()
 @property (nonatomic, strong) UIImageView *bgImageView;
@@ -9,8 +19,6 @@
 @property (nonatomic, strong) UIButton *cancelButton;
 @property (nonatomic, copy) NotificationPromptHandler allowHandler;
 @property (nonatomic, copy) NotificationPromptHandler cancelHandler;
-/// Kept so we can resize it on rotation (it lives inside gradView, not self.view.layer directly).
-@property (nonatomic, strong) CAGradientLayer *gradientLayer;
 @property (nonatomic, assign) BOOL handledAction;
 @end
 
@@ -39,17 +47,15 @@
     [self.view addSubview:_bgImageView];
 
     // Gradient overlay to darken image
-    _gradientLayer = [CAGradientLayer layer];
-    _gradientLayer.colors = @[(id)[UIColor colorWithWhite:0.0 alpha:0.45].CGColor,
-                               (id)[UIColor colorWithWhite:0.0 alpha:0.65].CGColor];
-    _gradientLayer.startPoint = CGPointMake(0.5, 0.0);
-    _gradientLayer.endPoint = CGPointMake(0.5, 1.0);
-
-    UIView *gradView = [UIView new];
+    ELNotificationDimmingView *gradView = [ELNotificationDimmingView new];
     gradView.translatesAutoresizingMaskIntoConstraints = NO;
+    gradView.userInteractionEnabled = NO;
+    CAGradientLayer *gradient = (CAGradientLayer *)gradView.layer;
+    gradient.colors = @[(id)[UIColor colorWithWhite:0.0 alpha:0.45].CGColor,
+                               (id)[UIColor colorWithWhite:0.0 alpha:0.65].CGColor];
+    gradient.startPoint = CGPointMake(0.5, 0.0);
+    gradient.endPoint = CGPointMake(0.5, 1.0);
     [self.view addSubview:gradView];
-    // frame will be set to final bounds in viewDidLayoutSubviews
-    [gradView.layer insertSublayer:_gradientLayer atIndex:0];
 
     // The viewport stays inside the safe area. Tall content can scroll instead
     // of compressing labels or pushing the actions off a landscape screen.
@@ -181,13 +187,6 @@
     ]];
 
     return self;
-}
-
-- (void)viewDidLayoutSubviews
-{
-    [super viewDidLayoutSubviews];
-    // Keep gradient filling the whole screen on every rotation.
-    _gradientLayer.frame = self.view.bounds;
 }
 
 - (void)onAllow:(id)sender
